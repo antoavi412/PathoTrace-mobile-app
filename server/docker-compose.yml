@@ -1,0 +1,55 @@
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pathotrace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pathotrace_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-pathotrace}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pathotrace} -d ${POSTGRES_DB:-pathotrace}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgres://${POSTGRES_USER:-pathotrace}:${POSTGRES_PASSWORD:-pathotrace_dev}@db:5432/${POSTGRES_DB:-pathotrace}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me-32-characters-minimum}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me-32-characters-minimum}
+      DEVICE_TOKEN_PEPPER: ${DEVICE_TOKEN_PEPPER:-dev-device-pepper-change-me}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+      EXPORT_MAX_RANGE_DAYS: ${EXPORT_MAX_RANGE_DAYS:-31}
+      EXPORT_MAX_ROWS: ${EXPORT_MAX_ROWS:-100000}
+      TEMPERATURE_HIGH_C: ${TEMPERATURE_HIGH_C:-39.5}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
