@@ -1,5 +1,93 @@
-# PathoTrace-mobile-app
 # PathoTrace Mobile Application
+
+AI-assisted bovine mastitis risk monitoring and cattle health management for dairy farmers,
+veterinarians, and cooperatives. Built with React Native, Expo SDK 58, Expo Router, and
+TypeScript.
+
+The app ships in **demonstration mode** until a backend is configured. Demo accounts and
+seeded records are sample data; no ML model is called and no risk probability is fabricated.
+
+## Quick start
+
+Requirements: Node.js 20 or later and npm. Use Expo Go or an Android/iOS emulator for
+native testing.
+
+```bash
+npm install
+npm start
+```
+
+Then scan the QR code with Expo Go, or press `a` for Android, `i` for iOS (macOS), or `w`
+for web. See [HOW_TO_RUN.md](./HOW_TO_RUN.md) for detailed platform and troubleshooting
+instructions.
+
+### Demo accounts
+
+| Role | Identifier | Password |
+| --- | --- | --- |
+| Farmer | `farmer@pathotrace.demo` | `demo1234` |
+| Veterinarian | `vet@pathotrace.demo` | `demo1234` |
+
+The veterinarian account can add observations to a cow. The farmer account sees the farmer
+workflow, including the vet directory.
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `npm start` | Start the Expo development server |
+| `npm run android` / `npm run ios` / `npm run web` | Start on a specific platform |
+| `npm run lint` | Run ESLint |
+| `npm run typecheck` | Run `tsc --noEmit` |
+| `npm test` | Run the Jest suite |
+| `npm run test:watch` | Run Jest in watch mode |
+
+Current verification: 17 test suites and 74 tests passing; ESLint and TypeScript checks are
+clean; Android, iOS, and web bundles export successfully.
+
+## Configure a live backend
+
+Demo mode is selected when `EXPO_PUBLIC_API_URL` is empty. To connect the PathoTrace API:
+
+```bash
+cp .env.example .env
+```
+
+Fill in the API base URL and endpoint paths in `.env`, then restart Metro with a cleared
+cache:
+
+```bash
+npx expo start -c
+```
+
+All `EXPO_PUBLIC_*` values are embedded in the client bundle. Do not put secrets in them.
+Endpoint paths, accepted response shapes, error handling, and offline/caching behaviour are
+documented in [docs/API_INTEGRATION.md](./docs/API_INTEGRATION.md).
+
+## Project structure
+
+```text
+src/
+  app/          Expo Router screens (auth, tabs, cow, assessment, vet, settings)
+  components/   Reusable UI and feature cards
+  features/     Auth, network/sync, preferences, and screen hooks
+  services/     API, demo data, cache, sync, and business logic
+  database/     SQLite on native, localStorage on web
+  constants/    Theme, configuration, and demo accounts
+tests/          Jest unit tests
+```
+
+## Safety and privacy notes
+
+- AI results are risk estimates, not confirmed veterinary diagnoses. The app always shows
+  the veterinary disclaimer.
+- Demonstration assessments are labelled as sample records and never claim a generated
+  probability.
+- Cache and queued writes are scoped per user and cleared on sign-out.
+- Token storage uses `expo-secure-store` on native platforms and `localStorage` on web.
+  Review that trade-off before deploying the web build.
+
+---
 
 ## Technical Documentation and Implementation Blueprint
 

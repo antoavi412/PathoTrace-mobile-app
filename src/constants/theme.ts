@@ -1,65 +1,113 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
- */
-
-import '@/global.css';
-
 import { Platform } from 'react-native';
 
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
+export const colors = {
+  primary: '#123D2C',
+  primaryDark: '#0B2A1E',
+  primaryLight: '#1D5A42',
+  accent: '#3FA66B',
+  accentSoft: '#E4F3EA',
+  background: '#F6F8F4',
+  surface: '#FFFFFF',
+  surfaceMuted: '#EEF2EA',
+  surfaceInverse: '#123D2C',
+  text: '#15241C',
+  textSecondary: '#54645B',
+  textMuted: '#7A8A80',
+  textInverse: '#F6FBF7',
+  border: '#E1E7DE',
+  borderStrong: '#CBD5C6',
+  low: '#2F9E5F',
+  lowSoft: '#E4F4EA',
+  medium: '#C98A13',
+  mediumSoft: '#FBF1DC',
+  high: '#C0392B',
+  highSoft: '#FBE7E4',
+  unknown: '#82908A',
+  unknownSoft: '#EDF0EE',
+  info: '#2D6E8E',
+  infoSoft: '#E5F0F5',
+  warning: '#9A6408',
+  warningSoft: '#FCF2DD',
+  danger: '#B03225',
+  dangerSoft: '#FBE7E4',
+  success: '#2F8A55',
+  successSoft: '#E4F4EA',
+  overlay: 'rgba(11, 42, 30, 0.45)',
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
-
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
-
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+export const spacing = {
+  xxs: 2,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+  huge: 48,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const radius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 22,
+  xxl: 28,
+  pill: 999,
+} as const;
+
+export const typography = {
+  display: { fontSize: 32, lineHeight: 38, fontWeight: '700' as const },
+  title: { fontSize: 24, lineHeight: 30, fontWeight: '700' as const },
+  heading: { fontSize: 20, lineHeight: 26, fontWeight: '700' as const },
+  subheading: { fontSize: 17, lineHeight: 23, fontWeight: '600' as const },
+  body: { fontSize: 15, lineHeight: 22, fontWeight: '400' as const },
+  bodyStrong: { fontSize: 15, lineHeight: 22, fontWeight: '600' as const },
+  small: { fontSize: 13, lineHeight: 18, fontWeight: '400' as const },
+  smallStrong: { fontSize: 13, lineHeight: 18, fontWeight: '600' as const },
+  caption: { fontSize: 11, lineHeight: 15, fontWeight: '500' as const },
+  tiny: { fontSize: 10, lineHeight: 13, fontWeight: '600' as const },
+} as const;
+
+export const shadows = {
+  card: Platform.select({
+    ios: {
+      shadowColor: '#143225',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+    },
+    android: { elevation: 2 },
+    default: {
+      shadowColor: '#143225',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+    },
+  }),
+  raised: Platform.select({
+    ios: {
+      shadowColor: '#143225',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.14,
+      shadowRadius: 20,
+    },
+    android: { elevation: 4 },
+    default: {
+      shadowColor: '#143225',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.14,
+      shadowRadius: 20,
+    },
+  }),
+} as const;
+
+export const riskTone = {
+  low: { label: 'Low risk', color: colors.low, soft: colors.lowSoft },
+  medium: { label: 'Medium risk', color: colors.medium, soft: colors.mediumSoft },
+  high: { label: 'High risk', color: colors.high, soft: colors.highSoft },
+  unknown: { label: 'Not assessed', color: colors.unknown, soft: colors.unknownSoft },
+} as const;
+
+export const maxContentWidth = 720;
+export const tabBarHeight = 60;
