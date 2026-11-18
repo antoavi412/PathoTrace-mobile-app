@@ -42,7 +42,8 @@ known **before** the build.
 - **Repository variable (recommended):** GitHub → **Settings** → **Secrets and
   variables** → **Actions** → **Variables** → **New repository variable**
   - Name: `EXPO_PUBLIC_API_URL`
-  - Value: e.g. `https://api.example.com` (no trailing slash)
+  - Value: e.g. `https://api.example.com` (do not include `/v1`; the workflow
+    already sets the API routes with that prefix)
 - **One-off:** pass `api_url` when running the workflow manually.
 
 If it is left empty, the app starts in its built-in demonstration mode, exactly

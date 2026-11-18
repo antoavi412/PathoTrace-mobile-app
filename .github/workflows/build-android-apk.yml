@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       api_url:
-        description: "Backend base URL baked into the app (EXPO_PUBLIC_API_URL). Leave empty to use the repository variable or demo mode."
+        description: "Backend origin (e.g. https://api.example.com, without /v1). Leave empty to use the repository variable or demo mode."
         required: false
         default: ""
 
@@ -31,14 +31,22 @@ concurrency:
 env:
   EXPO_NO_TELEMETRY: "1"
   CI: "1"
-  # RN template default is 2 GB; release builds of Expo modules need more.
-  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g"
 
 jobs:
   build-apk:
     name: Build release APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      EXPO_PUBLIC_API_URL: ${{ inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
+      EXPO_PUBLIC_AUTH_LOGIN_PATH: /v1/login
+      EXPO_PUBLIC_AUTH_LOGOUT_PATH: /v1/logout
+      EXPO_PUBLIC_FORGOT_PASSWORD_PATH: /v1/forgot-password
+      EXPO_PUBLIC_CATTLE_PATH: /v1/cattle
+      EXPO_PUBLIC_ASSESSMENTS_PATH: /v1/assessments
+      EXPO_PUBLIC_ALERTS_PATH: /v1/alerts
+      EXPO_PUBLIC_HEALTH_RECORDS_PATH: /v1/health-records
+      EXPO_PUBLIC_OBSERVATIONS_PATH: /v1/observations
 
     steps:
       - name: Checkout repository
@@ -61,17 +69,6 @@ jobs:
 
       - name: Set up Gradle (with build cache)
         uses: gradle/actions/setup-gradle@v4
-
-      # EXPO_PUBLIC_* values are inlined into the JS bundle at build time,
-      # so the backend URL has to be present before the native build starts.
-      - name: Configure backend URL
-        env:
-          INPUT_API_URL: ${{ github.event.inputs.api_url }}
-          REPO_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
-        run: |
-          API_URL="${INPUT_API_URL:-$REPO_API_URL}"
-          printf 'EXPO_PUBLIC_API_URL=%s\n' "$API_URL" > .env
-          echo "Baking EXPO_PUBLIC_API_URL='${API_URL}' into the bundle"
 
       # The android/ folder is gitignored, so it is generated here from app.json.
       - name: Generate native Android project
@@ -148,13 +145,10 @@ jobs:
 
       - name: Build release APK
         working-directory: android
-        env:
-          # Also exported directly: Metro inlines EXPO_PUBLIC_* from the process
-          # environment during the release bundle task.
-          EXPO_PUBLIC_API_URL: ${{ github.event.inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace \
+            '-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g'
 
       - name: Rename APK
         run: |
