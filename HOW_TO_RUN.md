@@ -95,3 +95,15 @@ npm run web
   ```bash
   npx expo-doctor
   ```
+
+---
+
+## 6. Building an installable APK
+
+A GitHub Actions workflow (`.github/workflows/build-android-apk.yml`) builds a
+ready-to-install Android APK in the cloud — no Android Studio or Expo account
+needed. Push to `main` or run it manually from the **Actions** tab, then download
+the **PathoTrace-APK** artifact from the run.
+
+See [docs/BUILD_APK.md](docs/BUILD_APK.md) for setup, backend URL configuration,
+and Play Store signing notes.

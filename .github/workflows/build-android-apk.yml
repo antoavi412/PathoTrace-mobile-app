@@ -1,0 +1,118 @@
+name: Build Android APK
+
+# Builds a real, installable Android APK in the cloud (no Expo account needed)
+# and attaches it to the workflow run as a downloadable artifact.
+#
+# Triggers:
+#   - every push to main/master
+#   - manually from the Actions tab ("Run workflow")
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "server/**"
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: "Backend base URL baked into the app (EXPO_PUBLIC_API_URL). Leave empty to use the repository variable or demo mode."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPO_NO_TELEMETRY: "1"
+  CI: "1"
+  # RN template default is 2 GB; release builds of Expo modules need more.
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g"
+
+jobs:
+  build-apk:
+    name: Build release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle (with build cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      # EXPO_PUBLIC_* values are inlined into the JS bundle at build time,
+      # so the backend URL has to be present before the native build starts.
+      - name: Configure backend URL
+        env:
+          INPUT_API_URL: ${{ github.event.inputs.api_url }}
+          REPO_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+        run: |
+          API_URL="${INPUT_API_URL:-$REPO_API_URL}"
+          printf 'EXPO_PUBLIC_API_URL=%s\n' "$API_URL" > .env
+          echo "Baking EXPO_PUBLIC_API_URL='${API_URL}' into the bundle"
+
+      # The android/ folder is gitignored, so it is generated here from app.json.
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install --clean
+
+      # compileSdk / build-tools / NDK are read from React Native's own version
+      # catalog so this keeps working after an SDK upgrade.
+      - name: Install required Android SDK packages
+        run: |
+          set -euo pipefail
+          TOML=node_modules/react-native/gradle/libs.versions.toml
+          get() { sed -n "s/^$1 = \"\([^\"]*\)\"/\1/p" "$TOML" | head -n1; }
+          SDK="$(get compileSdk)"; BT="$(get buildTools)"; NDK="$(get ndkVersion)"
+          echo "compileSdk=$SDK build-tools=$BT ndk=$NDK"
+          SDKMANAGER="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(command -v sdkmanager)"; fi
+          echo "Using sdkmanager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-$SDK" "build-tools;$BT" "ndk;$NDK"
+
+      - name: Build release APK
+        working-directory: android
+        env:
+          # Also exported directly: Metro inlines EXPO_PUBLIC_* from the process
+          # environment during the release bundle task.
+          EXPO_PUBLIC_API_URL: ${{ github.event.inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Rename APK
+        run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          mkdir -p artifacts
+          cp android/app/build/outputs/apk/release/*.apk "artifacts/PathoTrace-$VERSION.apk"
+          ls -lh artifacts
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PathoTrace-APK
+          path: artifacts/*.apk
+          if-no-files-found: error
+          retention-days: 30
