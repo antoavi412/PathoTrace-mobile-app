@@ -79,9 +79,10 @@ uploaded to the Play Console instead of an APK.
   `npm install` locally and commit the lockfile.
 - **`SDK location not found`** → the runner's Android SDK env vars are missing;
   the workflow already installs the needed `platforms`, `build-tools` and `ndk`.
-- **Native versions drift** → the SDK packages are read from
-  `node_modules/react-native/gradle/libs.versions.toml`, so they follow React
-  Native's requirements rather than being hard-coded.
+- **Native versions drift** → `compileSdk`, `build-tools` and `ndkVersion` are
+  read from the `android/` project that `expo prebuild` generates, so they always
+  match the installed Expo/React Native template (never from React Native's own
+  `libs.versions.toml`, which targets SDK levels that are not published yet).
 - **Build feels slow** → the first run populates the Gradle cache (typically
   10–20 minutes); later runs reuse it.
 - **Want iOS?** That requires a macOS runner and an Apple Developer account, so it

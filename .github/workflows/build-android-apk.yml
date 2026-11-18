@@ -77,20 +77,74 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install --clean
 
-      # compileSdk / build-tools / NDK are read from React Native's own version
-      # catalog so this keeps working after an SDK upgrade.
+      # Native versions are read from the project expo prebuild just generated.
+      # Do NOT read node_modules/react-native/gradle/libs.versions.toml: that file
+      # tracks React Native's own (unpublished) build targets, e.g. compileSdk 37,
+      # which does not exist in the public SDK repository yet.
       - name: Install required Android SDK packages
         run: |
           set -euo pipefail
-          TOML=node_modules/react-native/gradle/libs.versions.toml
-          get() { sed -n "s/^$1 = \"\([^\"]*\)\"/\1/p" "$TOML" | head -n1; }
-          SDK="$(get compileSdk)"; BT="$(get buildTools)"; NDK="$(get ndkVersion)"
-          echo "compileSdk=$SDK build-tools=$BT ndk=$NDK"
+
           SDKMANAGER="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
           if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(command -v sdkmanager)"; fi
           echo "Using sdkmanager: $SDKMANAGER"
-          yes | "$SDKMANAGER" --licenses > /dev/null || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-$SDK" "build-tools;$BT" "ndk;$NDK"
+
+          # `yes` exits with SIGPIPE once sdkmanager stops reading; ignore status.
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+
+          python3 - <<'PY' > /tmp/android-versions.env
+          import glob, re
+
+          paths = ["android/gradle.properties", "android/build.gradle", "android/build.gradle.kts"]
+          text = ""
+          for path in paths:
+              try:
+                  text += open(path, encoding="utf-8").read() + "\n"
+              except OSError:
+                  pass
+
+          def pick(*names):
+              for name in names:
+                  for line in text.splitlines():
+                      if re.search(rf"\b{re.escape(name)}\b", line):
+                          number = re.search(r"\d+(?:\.\d+)*", line)
+                          if number:
+                              return number.group(0)
+              return ""
+
+          print("COMPILE_SDK=" + pick("android.compileSdkVersion", "compileSdkVersion", "compileSdk"))
+          print("BUILD_TOOLS=" + pick("android.buildToolsVersion", "buildToolsVersion", "buildTools"))
+          print("NDK=" + pick("android.ndkVersion", "ndkVersion"))
+          PY
+
+          cat /tmp/android-versions.env
+          . /tmp/android-versions.env
+
+          # If the template does not pin an NDK, fall back to the version React
+          # Native itself expects (unlike compileSdk, NDK releases are published
+          # ahead of time, so this value is safe to use).
+          if [ -z "${NDK:-}" ] && [ -f node_modules/react-native/gradle/libs.versions.toml ]; then
+            NDK="$(sed -n 's/^ndkVersion = "\([^"]*\)".*/\1/p' node_modules/react-native/gradle/libs.versions.toml | head -n1)"
+            echo "NDK not pinned by the template, using $NDK"
+          fi
+
+          install_pkg() {
+            echo "::group::sdkmanager $1"
+            if "$SDKMANAGER" "$1" < /dev/null; then
+              echo "installed $1"
+            else
+              echo "::warning::Could not install '$1'; the Gradle build will try to download it."
+            fi
+            echo "::endgroup::"
+          }
+
+          install_pkg "platform-tools"
+          if [ -n "${COMPILE_SDK:-}" ]; then install_pkg "platforms;android-$COMPILE_SDK"; fi
+          if [ -n "${BUILD_TOOLS:-}" ]; then install_pkg "build-tools;$BUILD_TOOLS"; fi
+          if [ -n "${NDK:-}" ]; then install_pkg "ndk;$NDK"; fi
+
+          echo "Installed SDK packages:"
+          "$SDKMANAGER" --list_installed 2>/dev/null | sed -n '1,40p' || true
 
       - name: Build release APK
         working-directory: android
